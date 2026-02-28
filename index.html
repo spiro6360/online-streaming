@@ -6,6 +6,7 @@
     <title>StreamX - Elite Live Streaming</title>
     <link rel="stylesheet" href="style.css" />
     <script src="https://unpkg.com/lucide@latest"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   </head>
   <body class="dark-theme">
     <!-- Header -->
@@ -77,14 +78,13 @@
       <main class="main-content" id="scroll-main">
         <!-- Home View -->
         <section id="view-home" class="content-view">
-          <div class="main-hero" id="hero-banner">
+          <div class="main-hero hidden" id="hero-banner">
             <div class="hero-overlay">
               <div class="hero-text">
                 <span class="pill-live">추천 라이브</span>
-                <h1>LCK 2024 서머 결승전<br />T1 vs GEN.G</h1>
-                <p>
-                  대한민국 최고의 팀들이 펼치는 최후의 승부, 지금 실시간 중계
-                  중!
+                <h1 id="hero-title-text">방송 중인 라이브가 없습니다.</h1>
+                <p id="hero-desc-text">
+                  새로운 방송을 시작하거나 다른 채널을 탐색해보세요.
                 </p>
                 <button class="primary-btn lg" id="btn-hero-watch">
                   지금 입장하기
