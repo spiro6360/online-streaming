@@ -23,7 +23,7 @@
           <input
             type="text"
             id="ipt-global-search"
-            placeholder="채널, 카테고리, 방송 제목 검색"
+            placeholder="채널, 방송 제목 검색"
           />
           <button id="btn-search-clear" class="hidden">
             <i data-lucide="x"></i>
@@ -48,7 +48,7 @@
             </div>
           </div>
           <div class="user-avatar-circle" id="btn-my-avatar">
-            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" id="header-avatar" />
+            <img src="" id="header-avatar" />
           </div>
         </div>
       </div>
@@ -66,9 +66,6 @@
           </button>
           <button class="side-link" data-view="explore">
             <i data-lucide="compass"></i> <span>탐색</span>
-          </button>
-          <button class="side-link" data-view="vod">
-            <i data-lucide="film"></i> <span>VOD</span>
           </button>
         </nav>
         <div class="sidebar-divider"></div>
@@ -105,7 +102,7 @@
 
         <!-- Live View -->
         <section id="view-live" class="content-view hidden">
-          <div class="page-head"><h1>라이브</h1></div>
+          <div class="page-head"><h1>실시간 라이브</h1></div>
           <div class="stream-grid" id="grid-live"></div>
         </section>
 
@@ -126,13 +123,13 @@
               <div class="mp-card">
                 <h3>내 자산</h3>
                 <div class="mp-cash">💰 <span id="mp-cash-val">0</span> 캐시</div>
-                <button class="primary-btn w-full mt-4">캐시 충전하기 (준비 중)</button>
+                <button class="primary-btn w-full mt-4">캐시 충전 (준비 중)</button>
               </div>
               <div class="mp-card">
-                <h3>내 방송 통계</h3>
+                <h3>방송 통계</h3>
                 <div class="mp-stats">
-                  <div class="stat-item"><span>팔로워</span><strong>0</strong></div>
-                  <div class="stat-item"><span>누적 시청자</span><strong>0</strong></div>
+                  <div class="stat-item"><span>누적 팔로워</span><strong>0</strong></div>
+                  <div class="stat-item"><span>총 시청자</span><strong>0</strong></div>
                 </div>
               </div>
             </div>
@@ -153,9 +150,7 @@
                   <div class="sp-avatar"><img src="" id="p-img" /></div>
                   <div class="sp-info">
                     <h2 id="p-title">방송 제목</h2>
-                    <div class="sp-meta">
-                      <span id="p-ch" class="bold-white">채널명</span>
-                    </div>
+                    <div class="sp-meta"><span id="p-ch" class="bold-white">채널명</span></div>
                   </div>
                 </div>
                 <div class="sp-right">
@@ -183,13 +178,15 @@
       <button class="m-nav-link" id="btn-m-mypage"><i data-lucide="user"></i><span>MY</span></button>
     </nav>
 
-    <!-- Global Modal -->
+    <!-- Global Auth Modal -->
     <div class="modal-dim hidden" id="modal-global">
       <div class="modal-box">
         <button class="modal-x" id="btn-modal-close"><i data-lucide="x"></i></button>
         <div class="modal-inner">
           <h2 id="modal-title">로그인</h2>
-          <div id="modal-fields"></div>
+          <div id="modal-fields">
+            <!-- JS에서 동적으로 생성됨 -->
+          </div>
           <button class="primary-btn w-full lg mt-4" id="btn-modal-submit">계속하기</button>
           <div class="modal-sub-actions">
             <span id="txt-modal-switch">계정이 없으신가요?</span>
@@ -207,7 +204,7 @@
           <h2>방송 시작하기</h2>
           <div class="field">
             <label>방송 제목</label>
-            <input type="text" id="ipt-live-title" placeholder="제목을 입력하세요" />
+            <input type="text" id="ipt-live-title" placeholder="방송 제목을 입력하세요" />
           </div>
           <div class="field">
             <label>카테고리</label>
