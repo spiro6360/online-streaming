@@ -5,6 +5,8 @@ create table public.profiles (
   email text,
   cash bigint default 0,
   avatar_url text,
+  stream_key text unique default gen_random_uuid()::text,
+  role text default 'user', -- 'user' or 'admin'
   updated_at timestamp with time zone default now()
 );
 

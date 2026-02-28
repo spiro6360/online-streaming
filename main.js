@@ -1,84 +1,82 @@
 /**
- * STREAMX - Global Controller (Direct Binding Version)
+ * STREAMX - Global Controller (Ultra-Robust Version)
  */
 
 (function() {
-  console.log("[StreamX] System Loading...");
+  console.log("[StreamX] Booting...");
 
   // 1. Supabase Initialization
-  const SUPABASE_URL = 'https://swfntarctmeinyftddtx.supabase.co';
-  const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3Zm50YXJjdG1laW55ZnRkZHR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyNzY0MjcsImV4cCI6MjA4Nzg1MjQyN30.KrgHiEPqCXPnVNIMK1AIiuoUT1iQc4K2w1SX4RHpWVE';
-  const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+  const SX_URL = 'https://swfntarctmeinyftddtx.supabase.co';
+  const SX_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3Zm50YXJjdG1laW55ZnRkZHR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyNzY0MjcsImV4cCI6MjA4Nzg1MjQyN30.KrgHiEPqCXPnVNIMK1AIiuoUT1iQc4K2w1SX4RHpWVE';
+  let sxClient = null;
+
+  function getClient() {
+    if (!sxClient && window.supabase) {
+      sxClient = window.supabase.createClient(SX_URL, SX_KEY);
+    }
+    return sxClient;
+  }
 
   const App = {
-    state: { 
-      view: "home", 
-      isLoggedIn: false, 
-      currentUser: null, 
-      userCash: 0,
+    state: {
+      isLoggedIn: false,
+      currentUser: null,
       streams: [],
-      query: ""
+      query: "",
+      hls: null
     },
 
-    // [중요] 모달 제어 함수
+    // --- Core UI Logic ---
     toggleModal(show, mode = "login") {
-      console.log(`[StreamX] toggleModal logic: show=${show}, mode=${mode}`);
+      console.log(`[App] Modal Toggle: ${show}, Mode: ${mode}`);
       const modal = document.getElementById("modal-global");
-      if (!modal) return console.error("Modal element not found in DOM");
+      if (!modal) return console.error("Modal element not found!");
 
       if (show) {
         modal.classList.remove("hidden");
         modal.style.display = "flex";
         
         const titleEl = document.getElementById("modal-title");
+        const fieldsEl = document.getElementById("modal-fields");
+        const switchTxtEl = document.getElementById("txt-modal-switch");
+        const switchBtnEl = document.getElementById("btn-modal-switch");
+
         if (titleEl) titleEl.textContent = mode === "login" ? "로그인" : "회원가입";
         
-        const fields = document.getElementById("modal-fields");
-        if (fields) {
+        if (fieldsEl) {
           if (mode === "register") {
-            this.state.isUsernameChecked = false; // 중복체크 상태 초기화
-            fields.innerHTML = `
+            fieldsEl.innerHTML = `
               <div class="field">
                 <label>닉네임</label>
                 <div style="display:flex; gap:8px;">
-                  <input type="text" id="modal-username" placeholder="사용할 닉네임" style="flex:1" autofocus />
-                  <button type="button" id="btn-check-user" class="secondary-btn" style="padding:0 12px; font-size:12px; white-space:nowrap;">중복확인</button>
+                  <input type="text" id="modal-id" placeholder="사용할 닉네임" autofocus style="flex:1" />
+                  <button type="button" id="btn-check-nick" class="secondary-btn" style="padding:0 12px; font-size:12px; white-space:nowrap;">중복확인</button>
                 </div>
-                <div id="user-check-msg" style="font-size:11px; margin-top:4px; height:14px;"></div>
+                <small id="nick-msg" style="display:block; margin-top:4px; font-size:11px;"></small>
               </div>
               <div class="field"><label>이메일</label><input type="email" id="modal-email" placeholder="email@example.com" /></div>
               <div class="field"><label>비밀번호</label><input type="password" id="modal-pw" placeholder="6자리 이상 비밀번호" /></div>
             `;
-            // 중복 확인 이벤트 바인딩
-            setTimeout(() => {
-              const checkBtn = document.getElementById("btn-check-user");
-              if (checkBtn) checkBtn.onclick = () => this.checkUsername();
-            }, 0);
           } else {
-            fields.innerHTML = `
-              <div class="field"><label>이메일</label><input type="email" id="modal-email" placeholder="email@example.com" autofocus /></div>
+            fieldsEl.innerHTML = `
+              <div class="field"><label>이메일</label><input type="email" id="modal-email" placeholder="이메일 입력" autofocus /></div>
               <div class="field"><label>비밀번호</label><input type="password" id="modal-pw" placeholder="비밀번호" /></div>
             `;
           }
         }
         
-        const switchTxt = document.getElementById("txt-modal-switch");
-        if (switchTxt) switchTxt.textContent = mode === "login" ? "계정이 없으신가요?" : "이미 계정이 있으신가요?";
-        const switchBtn = document.getElementById("btn-modal-switch");
-        if (switchBtn) {
-          switchBtn.textContent = mode === "login" ? "회원가입" : "로그인";
-          switchBtn.onclick = () => this.toggleModal(true, mode === "login" ? "register" : "login");
-        }
+        this.state.isNickChecked = false;
+        this.state.checkedNick = "";
+
+        if (switchTxtEl) switchTxtEl.textContent = mode === "login" ? "계정이 없으신가요?" : "이미 계정이 있으신가요?";
+        if (switchBtnEl) switchBtnEl.textContent = mode === "login" ? "회원가입" : "로그인";
         
         const submitBtn = document.getElementById("btn-modal-submit");
         if (submitBtn) {
-          submitBtn.onclick = () => this.handleAuth();
           submitBtn.disabled = false;
           submitBtn.textContent = "계속하기";
+          submitBtn.dataset.mode = mode;
         }
-
-        const closeBtn = document.getElementById("btn-modal-close");
-        if (closeBtn) closeBtn.onclick = () => this.toggleModal(false);
       } else {
         modal.classList.add("hidden");
         modal.style.display = "none";
@@ -86,158 +84,183 @@
     },
 
     async checkUsername() {
-      const username = document.getElementById("modal-username")?.value.trim();
-      const msgEl = document.getElementById("user-check-msg");
-      if (!username || username.length < 2) {
-        if (msgEl) { msgEl.style.color = "#ff4d4d"; msgEl.textContent = "닉네임을 2자 이상 입력해주세요."; }
-        return;
-      }
+      const client = getClient();
+      const nickInput = document.getElementById("modal-id");
+      const msgEl = document.getElementById("nick-msg");
+      const nick = nickInput?.value.trim();
 
-      const btn = document.getElementById("btn-check-user");
-      if (btn) btn.disabled = true;
+      if (!nick) return alert("닉네임을 입력해 주세요.");
+      if (nick.length < 2) return alert("닉네임은 2자 이상이어야 합니다.");
 
       try {
-        const { data, error } = await supabase.from('profiles').select('username').eq('username', username).maybeSingle();
+        const { data, error } = await client.from('profiles').select('username').eq('username', nick);
         if (error) throw error;
-        
-        if (data) {
-          this.state.isUsernameChecked = false;
-          if (msgEl) { msgEl.style.color = "#ff4d4d"; msgEl.textContent = "이미 사용 중인 닉네임입니다."; }
+
+        if (data && data.length > 0) {
+          msgEl.textContent = "이미 사용 중인 닉네임입니다.";
+          msgEl.style.color = "#ff4d4d";
+          this.state.isNickChecked = false;
         } else {
-          this.state.isUsernameChecked = true;
-          this.state.checkedUsername = username;
-          if (msgEl) { msgEl.style.color = "#4ade80"; msgEl.textContent = "사용 가능한 닉네임입니다."; }
+          msgEl.textContent = "사용 가능한 닉네임입니다.";
+          msgEl.style.color = "#4dff4d";
+          this.state.isNickChecked = true;
+          this.state.checkedNick = nick;
         }
-      } catch (e) {
-        console.error(e);
-        alert("중복 확인 중 오류가 발생했습니다.");
-      } finally {
-        if (btn) btn.disabled = false;
+      } catch (err) {
+        console.error("Nick check error:", err);
       }
     },
 
+    switchView(viewId) {
+      console.log("[App] Switch View:", viewId);
+      document.querySelectorAll(".content-view").forEach(v => v.classList.add("hidden"));
+      const target = document.getElementById(`view-${viewId}`);
+      if (target) target.classList.remove("hidden");
+      
+      document.querySelectorAll(".side-link, .m-nav-link").forEach(n => {
+        n.classList.toggle("active", n.dataset.view === viewId);
+      });
+
+      if (viewId !== "player" && this.state.hls) {
+        this.state.hls.destroy();
+        this.state.hls = null;
+      }
+
+      this.render();
+    },
+
+    toggleStreamKey() {
+      const el = document.getElementById("stream-key-val");
+      if (el.type === "password") {
+        el.type = "text";
+        el.value = this.state.currentUser?.stream_key || "N/A";
+      } else {
+        el.type = "password";
+        el.value = "********";
+      }
+    },
+
+    // --- Authentication ---
     async handleAuth() {
-      if (!supabase) return alert("데이터베이스 연결 실패");
-      const titleEl = document.getElementById("modal-title");
-      const mode = titleEl && titleEl.textContent === "회원가입" ? "register" : "login";
+      const client = getClient();
+      if (!client) return alert("데이터베이스 연결 대기 중...");
+
+      const submitBtn = document.getElementById("btn-modal-submit");
+      const mode = submitBtn ? submitBtn.dataset.mode : "login";
       
       const email = document.getElementById("modal-email")?.value.trim();
       const password = document.getElementById("modal-pw")?.value.trim();
-      const username = document.getElementById("modal-username")?.value.trim();
+      const username = document.getElementById("modal-id")?.value.trim();
 
-      if (!email || !password) return alert("이메일과 비밀번호를 입력해주세요.");
+      if (!email || !password || (mode === "register" && !username)) {
+        return alert("모든 정보를 입력해 주세요.");
+      }
 
       if (mode === "register") {
-        if (!username) return alert("닉네임을 입력해주세요.");
-        if (!this.state.isUsernameChecked || this.state.checkedUsername !== username) {
+        if (!this.state.isNickChecked || this.state.checkedNick !== username) {
           return alert("닉네임 중복 확인을 해주세요.");
         }
         if (password.length < 6) return alert("비밀번호는 6자리 이상이어야 합니다.");
       }
 
-      const btn = document.getElementById("btn-modal-submit");
-      if (btn) { btn.disabled = true; btn.textContent = "처리 중..."; }
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.textContent = "처리 중...";
+      }
 
       try {
         if (mode === "register") {
-          const { error } = await supabase.auth.signUp({ 
+          const { error } = await client.auth.signUp({ 
             email, 
             password, 
             options: { data: { username } } 
           });
-          if (error) {
-            if (error.message.includes("User already registered")) {
-              throw new Error("이미 가입된 이메일입니다.");
-            }
-            throw error;
-          }
-          alert("회원가입 성공! 메일함(또는 스팸함)에서 인증 메일을 확인한 후 로그인해 주세요.");
+          if (error) throw error;
+          alert("회원가입 신청 성공! 메일을 확인한 후 로그인해 주세요.");
           this.toggleModal(true, "login");
         } else {
-          const { error } = await supabase.auth.signInWithPassword({ email, password });
+          const { error } = await client.auth.signInWithPassword({ email, password });
           if (error) throw error;
           location.reload();
         }
-      } catch (e) {
-        alert("알림: " + e.message);
+      } catch (err) {
+        alert("오류: " + err.message);
       } finally {
-        if (btn) { btn.disabled = false; btn.textContent = "계속하기"; }
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.textContent = "계속하기";
+        }
       }
     },
 
-    async init() {
-      console.log("[StreamX] App initializing...");
-      this.bindGlobalEvents();
-      this.checkSession();
-      this.loadStreams();
-      if (window.lucide) window.lucide.createIcons();
-    },
-
-    bindGlobalEvents() {
-      document.addEventListener("click", (e) => {
-        const t = e.target.closest("[data-view], #btn-logout, #btn-sidebar-toggle, #lnk-home-logo");
-        if (!t) return;
-
-        if (t.dataset.view) { e.preventDefault(); this.switchView(t.dataset.view); }
-        else if (t.id === "btn-logout") { supabase.auth.signOut().then(() => location.reload()); }
-        else if (t.id === "btn-sidebar-toggle") { document.getElementById("sidebar")?.classList.toggle("closed"); }
-        else if (t.id === "lnk-home-logo") { e.preventDefault(); this.switchView("home"); }
-      });
-    },
-
     async checkSession() {
-      if (!supabase) return;
-      const { data: { session } } = await supabase.auth.getSession();
+      const client = getClient();
+      if (!client) return;
+      const { data: { session } } = await client.auth.getSession();
       if (session?.user) {
         this.state.isLoggedIn = true;
-        const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-        this.state.currentUser = profile || { username: "User", avatar_url: "" };
+        const { data: profile } = await client.from('profiles').select('*').eq('id', session.user.id).single();
+        this.state.currentUser = profile;
       }
       this.render();
     },
 
     async loadStreams() {
-      if (!supabase) return;
-      const { data } = await supabase.from('streams').select('*').order('created_at', { ascending: false });
-      this.state.streams = data || [];
-      this.render();
-    },
-
-    switchView(id) {
-      this.state.view = id;
-      document.querySelectorAll(".content-view").forEach(v => v.classList.add("hidden"));
-      document.getElementById(`view-${id}`)?.classList.remove("hidden");
-      document.querySelectorAll(".side-link, .m-nav-link").forEach(n => n.classList.toggle("active", n.dataset.view === id));
-      this.render();
+      const client = getClient();
+      if (!client) return;
+      const { data, error } = await client.from('streams').select('*').order('created_at', { ascending: false });
+      if (!error) {
+        this.state.streams = data || [];
+        this.renderGrids();
+      }
     },
 
     render() {
-      const guest = document.getElementById("zone-guest");
-      const user = document.getElementById("zone-user");
+      const zoneGuest = document.getElementById("zone-guest");
+      const zoneUser = document.getElementById("zone-user");
+      
       if (this.state.isLoggedIn && this.state.currentUser) {
-        guest?.classList.add("hidden");
-        user?.classList.remove("hidden");
-        const cash = document.getElementById("user-cash");
-        if (cash) cash.textContent = (this.state.currentUser.cash || 0).toLocaleString();
-        const av = document.getElementById("header-avatar");
-        if (av) av.src = this.state.currentUser.avatar_url || `https://api.dicebear.com/7.x/avataaars/svg?seed=${this.state.currentUser.id}`;
+        zoneGuest?.classList.add("hidden");
+        zoneUser?.classList.remove("hidden");
+        
+        const cashEls = [document.getElementById("user-cash"), document.getElementById("mp-cash-val")];
+        cashEls.forEach(el => { if (el) el.textContent = this.state.currentUser.cash?.toLocaleString() || "0"; });
+        
+        const avatarEls = [document.getElementById("header-avatar"), document.getElementById("mp-avatar")];
+        avatarEls.forEach(el => { if (el) el.src = this.state.currentUser.avatar_url; });
+
+        if (document.getElementById("mp-username")) document.getElementById("mp-username").textContent = this.state.currentUser.username;
+        if (document.getElementById("mp-email")) document.getElementById("mp-email").textContent = this.state.currentUser.email;
       } else {
-        guest?.classList.remove("hidden");
-        user?.classList.add("hidden");
+        zoneGuest?.classList.remove("hidden");
+        zoneUser?.classList.add("hidden");
       }
-      this.renderGrid("grid-home");
-      this.renderGrid("grid-live");
+      this.renderGrids();
     },
 
-    renderGrid(id) {
-      const el = document.getElementById(id);
-      if (!el) return;
-      el.innerHTML = this.state.streams.length ? this.state.streams.map(s => `
-        <div class="stream-card" onclick="window.app.openStream('${s.id}')">
-          <div class="thumb-box"><img src="${s.thumbnail_url}" /></div>
-          <div class="card-details"><div class="card-txt"><div class="c-title">${s.title}</div><div class="c-channel">${s.username}</div></div></div>
-        </div>
-      `).join("") : '<div style="grid-column:1/-1; padding:80px; text-align:center; color:#888">현재 방송이 없습니다.</div>';
+    renderGrids() {
+      const configs = [
+        { id: "grid-home", filter: s => s.status === "live" },
+        { id: "grid-live", filter: s => s.status === "live" },
+        { id: "grid-vod", filter: s => s.status === "vod" }
+      ];
+
+      configs.forEach(cfg => {
+        const el = document.getElementById(cfg.id);
+        if (!el) return;
+        const filtered = this.state.streams.filter(cfg.filter);
+        el.innerHTML = filtered.length ? filtered.map(s => `
+          <div class="stream-card" onclick="window.app.openStream('${s.id}')">
+            <div class="thumb-box"><img src="${s.thumbnail_url || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400'}" /></div>
+            <div class="card-details">
+              <div class="card-txt">
+                <div class="c-title">${s.title}</div>
+                <div class="c-channel">${s.username}</div>
+              </div>
+            </div>
+          </div>
+        `).join("") : '<div class="empty-msg" style="padding:40px; color:#888;">내역이 없습니다.</div>';
+      });
     },
 
     openStream(id) {
@@ -247,9 +270,59 @@
       document.getElementById("p-title").textContent = s.title;
       document.getElementById("p-ch").textContent = s.username;
       document.getElementById("p-img").src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${s.username}`;
+
+      const video = document.getElementById("main-video");
+      // 실제 구현 시: 미디어 서버에서 제공하는 HLS 경로 (예: https://server.com/live/stream_key/index.m3u8)
+      // 여기서는 테스트를 위한 샘플 HLS 경로를 사용합니다.
+      const source = "https://demo.unified-streaming.com/k8s/features/stable/video/tears-of-steel/tears-of-steel.ism/.m3u8";
+
+      if (window.Hls && window.Hls.isSupported()) {
+        const hls = new window.Hls();
+        hls.loadSource(source);
+        hls.attachMedia(video);
+        this.state.hls = hls;
+      } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
+        video.src = source;
+      }
     }
   };
 
   window.app = App;
-  document.addEventListener("DOMContentLoaded", () => App.init());
+  document.addEventListener("DOMContentLoaded", () => {
+    App.checkSession();
+    App.loadStreams();
+
+    document.addEventListener("click", (e) => {
+      const t = e.target.closest("button, a, .side-link, .m-nav-link");
+      if (!t) return;
+
+      const id = t.id;
+      if (t.dataset.view) {
+        e.preventDefault();
+        App.switchView(t.dataset.view);
+      } else if (id === "btn-check-nick") {
+        App.checkUsername();
+      } else if (id === "btn-login") {
+        App.toggleModal(true, "login");
+      } else if (id === "btn-register") {
+        App.toggleModal(true, "register");
+      } else if (id === "btn-modal-close") {
+        App.toggleModal(false);
+      } else if (id === "btn-modal-switch") {
+        const title = document.getElementById("modal-title")?.textContent;
+        App.toggleModal(true, title === "로그인" ? "register" : "login");
+      } else if (id === "btn-modal-submit") {
+        App.handleAuth();
+      } else if (id === "btn-logout") {
+        const client = getClient();
+        if (client) client.auth.signOut().then(() => location.reload());
+      } else if (id === "lnk-home-logo") {
+        e.preventDefault();
+        App.switchView("home");
+      }
+    });
+
+    if (window.lucide) window.lucide.createIcons();
+  });
+
 })();

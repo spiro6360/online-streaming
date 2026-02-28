@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css" />
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/hls.js@latest"></script>
   </head>
   <body class="dark-theme">
     <!-- Header -->
@@ -36,7 +37,7 @@
           <button class="primary-btn" id="btn-register" onclick="window.app.toggleModal(true, 'register')">회원가입</button>
         </div>
         <div id="zone-user" class="auth-zone hidden">
-          <button class="go-live-btn" id="btn-go-live"><i data-lucide="video"></i> 방송하기</button>
+          <button class="go-live-btn" id="btn-go-live" onclick="window.app.switchView('mypage')"><i data-lucide="video"></i> 방송하기</button>
           <span class="coin-badge">💰 <span id="user-cash">0</span></span>
           <div class="relative">
             <button class="icon-btn" id="btn-noti-toggle"><i data-lucide="bell"></i></button>
@@ -47,7 +48,7 @@
               </div>
             </div>
           </div>
-          <div class="user-avatar-circle" id="btn-my-avatar">
+          <div class="user-avatar-circle" id="btn-my-avatar" onclick="window.app.switchView('mypage')">
             <img src="" id="header-avatar" />
           </div>
         </div>
@@ -63,6 +64,9 @@
           </button>
           <button class="side-link" data-view="live">
             <i data-lucide="radio"></i> <span>라이브</span>
+          </button>
+          <button class="side-link" data-view="vod">
+            <i data-lucide="play-circle"></i> <span>VOD</span>
           </button>
           <button class="side-link" data-view="explore">
             <i data-lucide="compass"></i> <span>탐색</span>
@@ -106,6 +110,12 @@
           <div class="stream-grid" id="grid-live"></div>
         </section>
 
+        <!-- VOD View -->
+        <section id="view-vod" class="content-view hidden">
+          <div class="page-head"><h1>다시보기 (VOD)</h1></div>
+          <div class="stream-grid" id="grid-vod"></div>
+        </section>
+
         <!-- My Page View -->
         <section id="view-mypage" class="content-view hidden">
           <div class="mypage-container">
@@ -121,16 +131,27 @@
             </div>
             <div class="mypage-content">
               <div class="mp-card">
-                <h3>내 자산</h3>
-                <div class="mp-cash">💰 <span id="mp-cash-val">0</span> 캐시</div>
-                <button class="primary-btn w-full mt-4">캐시 충전 (준비 중)</button>
+                <h3>방송 송출 설정 (OBS용)</h3>
+                <div class="stream-settings">
+                  <div class="field">
+                    <label>서버 URL (RTMP)</label>
+                    <div class="copy-box">
+                      <input type="text" value="rtmp://your-media-server-ip/live" readonly id="rtmp-url" />
+                    </div>
+                  </div>
+                  <div class="field">
+                    <label>스트림 키</label>
+                    <div class="copy-box">
+                      <input type="password" value="********" readonly id="stream-key-val" />
+                      <button class="icon-btn" onclick="window.app.toggleStreamKey()"><i data-lucide="eye"></i></button>
+                    </div>
+                  </div>
+                </div>
+                <p class="help-text">OBS 설정 > 방송에서 위 정보를 입력하세요.</p>
               </div>
               <div class="mp-card">
-                <h3>방송 통계</h3>
-                <div class="mp-stats">
-                  <div class="stat-item"><span>누적 팔로워</span><strong>0</strong></div>
-                  <div class="stat-item"><span>총 시청자</span><strong>0</strong></div>
-                </div>
+                <h3>내 자산</h3>
+                <div class="mp-cash">💰 <span id="mp-cash-val">0</span> 캐시</div>
               </div>
             </div>
           </div>
@@ -141,8 +162,7 @@
           <div class="player-wrapper">
             <div class="player-main-area">
               <div class="video-box" id="video-frame">
-                <div class="player-ui-top">LIVE</div>
-                <i data-lucide="play" class="icon-play-big"></i>
+                <video id="main-video" controls autoplay playsinline></video>
                 <div id="toast-donation" class="donation-popup hidden"></div>
               </div>
               <div class="stream-profile-bar">
@@ -175,7 +195,7 @@
     <nav class="mobile-bottom-nav">
       <button class="m-nav-link active" data-view="home"><i data-lucide="home"></i><span>홈</span></button>
       <button class="m-nav-link" data-view="live"><i data-lucide="radio"></i><span>라이브</span></button>
-      <button class="m-nav-link" id="btn-m-mypage"><i data-lucide="user"></i><span>MY</span></button>
+      <button class="m-nav-link" id="btn-m-mypage" onclick="window.app.switchView('mypage')"><i data-lucide="user"></i><span>MY</span></button>
     </nav>
 
     <!-- Global Auth Modal -->
@@ -192,29 +212,6 @@
             <span id="txt-modal-switch">계정이 없으신가요?</span>
             <button id="btn-modal-switch">회원가입</button>
           </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Go Live Modal -->
-    <div class="modal-dim hidden" id="modal-live">
-      <div class="modal-box">
-        <button class="modal-x" id="btn-live-close"><i data-lucide="x"></i></button>
-        <div class="modal-inner">
-          <h2>방송 시작하기</h2>
-          <div class="field">
-            <label>방송 제목</label>
-            <input type="text" id="ipt-live-title" placeholder="방송 제목을 입력하세요" />
-          </div>
-          <div class="field">
-            <label>카테고리</label>
-            <select id="sel-live-cat" class="modal-select">
-              <option value="game">게임</option>
-              <option value="sports">스포츠</option>
-              <option value="variety">버라이어티</option>
-            </select>
-          </div>
-          <button class="primary-btn w-full lg mt-4" id="btn-live-start">지금 라이브 시작</button>
         </div>
       </div>
     </div>
