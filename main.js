@@ -1,39 +1,28 @@
 /**
- * STREAMX - Global Controller (Maximum Reliability)
+ * STREAMX - Global Controller (Final Stable Version)
  */
 
-// 1. 초기 앱 상태
+// 1. Supabase & 상태 초기화
+const SUPABASE_URL = 'https://swfntarctmeinyftddtx.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3Zm50YXJjdG1laW55ZnRkZHR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyNzY0MjcsImV4cCI6MjA4Nzg1MjQyN30.KrgHiEPqCXPnVNIMK1AIiuoUT1iQc4K2w1SX4RHpWVE';
+const supabase = window.supabase ? window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY) : null;
+
 const state = {
   view: "home",
-  isSidebarOpen: true,
   isLoggedIn: false,
   currentUser: null,
-  userCash: 1250,
   streams: [],
   query: ""
 };
 
-// 2. Supabase 설정 (오류 방지 처리가 포함된 초기화)
-const SUPABASE_URL = 'https://swfntarctmeinyftddtx.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3Zm50YXJjdG1laW55ZnRkZHR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyNzY0MjcsImV4cCI6MjA4Nzg1MjQyN30.KrgHiEPqCXPnVNIMK1AIiuoUT1iQc4K2w1SX4RHpWVE';
-let supabase = null;
-
-function initSupabase() {
-  try {
-    if (window.supabase) {
-      supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
-      console.log("Supabase client created.");
-    }
-  } catch (e) {
-    console.error("Supabase init error:", e);
-  }
-}
-
-// 3. 전역 앱 객체
+// 2. 핵심 로직 객체
 window.app = {
-  // 화면 전환 (가장 먼저 작동해야 함)
+  // 화면 전환 기능
   switchView: (viewId) => {
+    console.log("Switching view to:", viewId);
     state.view = viewId;
+    
+    // UI 업데이트
     document.querySelectorAll(".content-view").forEach(v => v.classList.add("hidden"));
     const target = document.getElementById(`view-${viewId}`);
     if (target) target.classList.remove("hidden");
@@ -41,28 +30,37 @@ window.app = {
     document.querySelectorAll(".side-link, .m-nav-link").forEach(n => {
       n.classList.toggle("active", n.dataset.view === viewId);
     });
+
     window.app.render();
+    const scrollMain = document.getElementById("scroll-main");
+    if (scrollMain) scrollMain.scrollTop = 0;
   },
 
-  // 모달 제어
+  // 모달(팝업) 제어
   toggleModal: (show, mode = "login") => {
     const modal = document.getElementById("modal-global");
     if (!modal) return;
+    
     modal.classList.toggle("hidden", !show);
     if (show) {
-      document.getElementById("modal-title").textContent = mode === "login" ? "로그인" : "회원가입";
+      const title = document.getElementById("modal-title");
       const fields = document.getElementById("modal-fields");
-      fields.innerHTML = mode === "register" ? `
-        <div class="field"><label>아이디</label><input type="text" id="modal-id" placeholder="아이디" /></div>
-        <div class="field"><label>이메일</label><input type="text" id="modal-email" placeholder="이메일" /></div>
-        <div class="field"><label>비밀번호</label><input type="password" id="modal-pw" placeholder="비밀번호" /></div>
-      ` : `
-        <div class="field"><label>이메일 또는 아이디</label><input type="text" id="modal-id" placeholder="이메일 또는 아이디" /></div>
-        <div class="field"><label>비밀번호</label><input type="password" id="modal-pw" placeholder="비밀번호" /></div>
-      `;
+      if (title) title.textContent = mode === "login" ? "로그인" : "회원가입";
+      
+      if (fields) {
+        fields.innerHTML = mode === "register" ? `
+          <div class="field"><label>아이디</label><input type="text" id="modal-id" placeholder="아이디" /></div>
+          <div class="field"><label>이메일</label><input type="text" id="modal-email" placeholder="이메일" /></div>
+          <div class="field"><label>비밀번호</label><input type="password" id="modal-pw" placeholder="비밀번호" /></div>
+        ` : `
+          <div class="field"><label>아이디/이메일</label><input type="text" id="modal-id" placeholder="아이디 또는 이메일" /></div>
+          <div class="field"><label>비밀번호</label><input type="password" id="modal-pw" placeholder="비밀번호" /></div>
+        `;
+      }
     }
   },
 
+  // 방송하기 모달 제어
   toggleLiveModal: (show) => {
     if (show && !state.isLoggedIn) {
       alert("로그인이 필요합니다.");
@@ -73,183 +71,211 @@ window.app = {
     if (modal) modal.classList.toggle("hidden", !show);
   },
 
-  // 화면 업데이트
+  // 화면 렌더링(갱신)
   render: () => {
-    // 로그인 상태 UI 업데이트
-    const zoneGuest = document.getElementById("zone-guest");
-    const zoneUser = document.getElementById("zone-user");
-    if (state.isLoggedIn) {
-      zoneGuest?.classList.add("hidden");
-      zoneUser?.classList.remove("hidden");
-      const cashEl = document.getElementById("user-cash");
-      if (cashEl) cashEl.textContent = state.userCash.toLocaleString();
-    } else {
-      zoneGuest?.classList.remove("hidden");
-      zoneUser?.classList.add("hidden");
-    }
-
-    // 추천 배너 업데이트
+    // 추천 배너 표시 여부
     const banner = document.getElementById("hero-banner");
     const showBanner = state.streams.length > 0 && state.view === "home" && !state.query;
-    banner?.classList.toggle("hidden", !showBanner);
+    if (banner) banner.classList.toggle("hidden", !showBanner);
+    
     if (showBanner) {
       const s = state.streams[0];
-      document.getElementById("hero-title-text").textContent = s.title;
-      document.getElementById("hero-desc-text").textContent = `${s.username}님의 라이브!`;
+      const titleText = document.getElementById("hero-title-text");
+      const descText = document.getElementById("hero-desc-text");
+      const watchBtn = document.getElementById("btn-hero-watch");
+      if (titleText) titleText.textContent = s.title;
+      if (descText) descText.textContent = `${s.username}님의 라이브 방송!`;
+      if (watchBtn) watchBtn.onclick = () => window.app.openStream(s.id);
     }
 
-    // 방송 리스트 갱신
+    // 로그인 상태에 따른 헤더 변경
+    const zoneGuest = document.getElementById("zone-guest");
+    const zoneUser = document.getElementById("zone-user");
+    if (zoneGuest) zoneGuest.classList.toggle("hidden", state.isLoggedIn);
+    if (zoneUser) zoneUser.classList.toggle("hidden", !state.isLoggedIn);
+    
+    if (state.isLoggedIn && state.currentUser) {
+      const cashEl = document.getElementById("user-cash");
+      if (cashEl) cashEl.textContent = (state.currentUser.cash || 0).toLocaleString();
+    }
+
+    // 방송 목록 그리드 갱신
     window.app.renderGrid("grid-home");
     window.app.renderGrid("grid-live");
   },
 
+  // 그리드에 방송 카드 생성
   renderGrid: (containerId) => {
     const container = document.getElementById(containerId);
     if (!container) return;
     container.innerHTML = "";
     
-    const filtered = state.streams.filter(s => {
+    let filtered = state.streams;
+    if (state.query) {
       const q = state.query.toLowerCase();
-      return s.title.toLowerCase().includes(q) || s.username.toLowerCase().includes(q);
-    });
+      filtered = filtered.filter(s => 
+        s.title.toLowerCase().includes(q) || s.username.toLowerCase().includes(q)
+      );
+    }
 
+    const emptyState = document.getElementById("empty-state");
     if (filtered.length === 0) {
-      if (containerId === "grid-home" && !state.query) {
-        document.getElementById("empty-state")?.classList.remove("hidden");
+      if (containerId === "grid-home" && !state.query && emptyState) {
+        emptyState.classList.remove("hidden");
       } else {
         container.innerHTML = '<div style="grid-column:1/-1; padding:100px; text-align:center; color:#666">방송이 없습니다.</div>';
       }
       return;
     }
-    document.getElementById("empty-state")?.classList.add("hidden");
+    if (emptyState) emptyState.classList.add("hidden");
 
     filtered.forEach(s => {
       const card = document.createElement("div");
       card.className = "stream-card";
       card.innerHTML = `
         <div class="thumb-box"><img src="${s.thumbnail_url}" /></div>
-        <div class="card-details"><div class="card-txt">
-          <div class="c-title">${s.title}</div><div class="c-channel">${s.username}</div>
-        </div></div>
+        <div class="card-details">
+          <div class="card-txt">
+            <div class="c-title">${s.title}</div>
+            <div class="c-channel">${s.username}</div>
+          </div>
+        </div>
       `;
       card.onclick = () => window.app.openStream(s.id);
       container.appendChild(card);
     });
   },
 
+  // 방송 시청 페이지 열기
   openStream: (id) => {
     const s = state.streams.find(x => x.id === id);
     if (!s) return;
     window.app.switchView("player");
-    document.getElementById("p-title").textContent = s.title;
-    document.getElementById("p-ch").textContent = s.username;
-    document.getElementById("p-img").src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${s.username}`;
+    const pTitle = document.getElementById("p-title");
+    const pCh = document.getElementById("p-ch");
+    const pImg = document.getElementById("p-img");
+    if (pTitle) pTitle.textContent = s.title;
+    if (pCh) pCh.textContent = s.username;
+    if (pImg) pImg.src = `https://api.dicebear.com/7.x/avataaars/svg?seed=${s.username}`;
   },
 
+  // 회원가입/로그인 처리
   handleAuth: async () => {
-    if (!supabase) { alert("연결 중입니다. 잠시 후 다시 시도하세요."); return; }
-    const mode = document.getElementById("modal-title").textContent === "로그인" ? "login" : "register";
-    const email = document.getElementById("modal-email")?.value || document.getElementById("modal-id")?.value;
-    const password = document.getElementById("modal-pw")?.value;
-    const username = document.getElementById("modal-id")?.value;
+    const emailEl = document.getElementById("modal-email");
+    const idEl = document.getElementById("modal-id");
+    const pwEl = document.getElementById("modal-pw");
+    const titleEl = document.getElementById("modal-title");
+    
+    const email = emailEl ? emailEl.value : (idEl ? idEl.value : "");
+    const password = pwEl ? pwEl.value : "";
+    const username = idEl ? idEl.value : "";
+    const mode = titleEl && titleEl.textContent === "로그인" ? "login" : "register";
+
+    if (!email || !password) return alert("모든 항목을 입력하세요.");
 
     try {
       if (mode === "register") {
         const { error } = await supabase.auth.signUp({ email, password, options: { data: { username } } });
         if (error) throw error;
-        alert("회원가입 완료! 로그인을 진행해주세요.");
+        alert("가입 성공! 메일을 확인하거나 로그인을 진행하세요.");
         window.app.toggleModal(true, "login");
       } else {
         const { error } = await supabase.auth.signInWithPassword({ email, password });
         if (error) throw error;
-        window.location.reload();
+        location.reload(); // 로그인 성공 시 새로고침
       }
-    } catch (e) { alert(e.message); }
-  },
-
-  handleCreateStream: async () => {
-    if (!supabase || !state.isLoggedIn) return;
-    const title = document.getElementById("ipt-live-title").value.trim();
-    if (!title) { alert("제목을 입력하세요."); return; }
-    const { error } = await supabase.from('streams').insert([{
-      user_id: state.currentUser.id,
-      username: state.currentUser.username,
-      title, category: document.getElementById("sel-live-cat").value,
-      thumbnail_url: "https://images.unsplash.com/photo-1492619375914-88005aa9e8fb?auto=format&fit=crop&q=80&w=800"
-    }]);
-    if (error) alert(error.message);
-    else window.location.reload();
+    } catch (e) {
+      alert("인증 오류: " + e.message);
+    }
   }
 };
 
-// 4. 이벤트 연결 (DOM 로드 후 즉시 실행)
-function setupEvents() {
-  console.log("Setting up event listeners...");
-  
-  // 모든 클릭을 최우선으로 감지
-  document.addEventListener("click", (e) => {
+// 3. 이벤트 바인딩 및 초기화
+document.addEventListener("DOMContentLoaded", () => {
+  console.log("App initializing...");
+
+  // 클릭 이벤트 통합 처리 (가장 확실한 방식)
+  document.body.addEventListener("click", (e) => {
     const target = e.target.closest("button, a, .side-link, .m-nav-link");
     if (!target) return;
 
-    // 탭 이동
+    // 탭 이동 (data-view 속성 기준)
     if (target.dataset.view) {
       e.preventDefault();
       window.app.switchView(target.dataset.view);
+      return;
     }
 
-    // 개별 버튼 액션
-    if (target.id === "btn-sidebar-toggle") {
-      state.isSidebarOpen = !state.isSidebarOpen;
-      document.getElementById("sidebar")?.classList.toggle("closed", !state.isSidebarOpen);
-      document.getElementById("scroll-main")?.classList.toggle("expanded", !state.isSidebarOpen);
-    }
-    if (target.id === "btn-login") window.app.toggleModal(true, "login");
-    if (target.id === "btn-register") window.app.toggleModal(true, "register");
-    if (target.id === "btn-modal-close") window.app.toggleModal(false);
-    if (target.id === "btn-modal-submit") window.app.handleAuth();
-    if (target.id === "btn-modal-switch") {
-      const isLogin = document.getElementById("modal-title").textContent === "로그인";
+    // 버튼 ID별 동작
+    const id = target.id;
+    if (id === "btn-login") window.app.toggleModal(true, "login");
+    else if (id === "btn-register") window.app.toggleModal(true, "register");
+    else if (id === "btn-modal-close") window.app.toggleModal(false);
+    else if (id === "btn-modal-submit") window.app.handleAuth();
+    else if (id === "btn-modal-switch") {
+      const titleEl = document.getElementById("modal-title");
+      const isLogin = titleEl && titleEl.textContent === "로그인";
       window.app.toggleModal(true, isLogin ? "register" : "login");
     }
-    if (target.id === "btn-go-live") window.app.toggleLiveModal(true);
-    if (target.id === "btn-live-close") window.app.toggleLiveModal(false);
-    if (target.id === "btn-live-start") window.app.handleCreateStream();
-    if (target.id === "lnk-home-logo") { e.preventDefault(); window.app.switchView("home"); }
-  }, true); // 캡처링 단계에서 감지하여 반응성 극대화
+    else if (id === "btn-go-live") window.app.toggleLiveModal(true);
+    else if (id === "btn-live-close") window.app.toggleLiveModal(false);
+    else if (id === "btn-live-start") {
+      const titleEl = document.getElementById("ipt-live-title");
+      const title = titleEl ? titleEl.value : "";
+      if (!title) return alert("제목을 입력하세요.");
+      
+      const catEl = document.getElementById("sel-live-cat");
+      supabase.from("streams").insert([{
+        user_id: state.currentUser.id,
+        username: state.currentUser.username,
+        title,
+        category: catEl ? catEl.value : "game",
+        thumbnail_url: "https://images.unsplash.com/photo-1492619375914-88005aa9e8fb?auto=format&fit=crop&q=80&w=800"
+      }]).then(() => location.reload());
+    }
+    else if (id === "btn-sidebar-toggle") {
+      const sidebar = document.getElementById("sidebar");
+      const main = document.getElementById("scroll-main");
+      if (sidebar) sidebar.classList.toggle("closed");
+      if (main) main.classList.toggle("expanded");
+    }
+    else if (id === "lnk-home-logo") {
+      e.preventDefault();
+      window.app.switchView("home");
+    }
+  });
 
-  // 검색
+  // 검색 기능
   const searchInput = document.getElementById("ipt-global-search");
   if (searchInput) {
-    searchInput.oninput = (e) => {
+    searchInput.addEventListener("input", (e) => {
       state.query = e.target.value.trim();
-      document.getElementById("btn-search-clear")?.classList.toggle("hidden", !state.query);
+      const clearBtn = document.getElementById("btn-search-clear");
+      if (clearBtn) clearBtn.classList.toggle("hidden", !state.query);
       window.app.render();
-    };
+    });
   }
-}
 
-// 5. 실행
-document.addEventListener("DOMContentLoaded", async () => {
-  initSupabase();
-  setupEvents();
-  
-  // 데이터 불러오기 (UI 차단 방지)
+  // 초기 데이터 로드 (비동기)
   if (supabase) {
-    try {
-      const { data: { session } } = await supabase.auth.getSession();
-      if (session?.user) {
-        const { data: profile } = await supabase.from('profiles').select('*').eq('id', session.user.id).single();
-        state.isLoggedIn = true;
-        state.currentUser = profile;
-        state.userCash = profile ? profile.cash : 1250;
+    // 1. 유저 세션 확인
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      if (session && session.user) {
+        supabase.from("profiles").select("*").eq("id", session.user.id).single().then(({ data }) => {
+          state.isLoggedIn = true;
+          state.currentUser = data || { id: session.user.id, username: session.user.user_metadata.username };
+          window.app.render();
+        });
       }
-      const { data: streams } = await supabase.from('streams').select('*').order('created_at', { ascending: false });
-      state.streams = streams || [];
-    } catch (e) {
-      console.warn("Initial data load failed, but UI is ready.");
-    }
+    });
+    // 2. 방송 목록 로드
+    supabase.from("streams").select("*").order("created_at", { ascending: false }).then(({ data }) => {
+      state.streams = data || [];
+      window.app.render();
+    });
   }
 
+  // 초기 렌더링
   window.app.render();
   if (window.lucide) window.lucide.createIcons();
 });
