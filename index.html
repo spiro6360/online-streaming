@@ -32,8 +32,8 @@
       </div>
       <div class="header-right">
         <div id="zone-guest" class="auth-zone">
-          <button class="ghost-btn" id="btn-login">로그인</button>
-          <button class="primary-btn" id="btn-register">회원가입</button>
+          <button class="ghost-btn" id="btn-login" onclick="window.app.toggleModal(true, 'login')">로그인</button>
+          <button class="primary-btn" id="btn-register" onclick="window.app.toggleModal(true, 'register')">회원가입</button>
         </div>
         <div id="zone-user" class="auth-zone hidden">
           <button class="go-live-btn" id="btn-go-live"><i data-lucide="video"></i> 방송하기</button>
