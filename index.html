@@ -1,14 +1,273 @@
 <!doctype html>
-<html lang="en">
-<head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Hello World</title>
-  <link href='/style.css' rel='stylesheet'>
-</head>
-<body>
-  <h1>Hello, world!</h1>
-  <button onclick="console.log('hello');">Press me</button>
-  <script defer type="text/javascript" src="/main.js"></script>
-</body>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>StreamX - Elite Live Streaming</title>
+    <link rel="stylesheet" href="style.css" />
+    <script src="https://unpkg.com/lucide@latest"></script>
+  </head>
+  <body class="dark-theme">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-left">
+        <button class="icon-btn" id="btn-sidebar-toggle">
+          <i data-lucide="menu"></i>
+        </button>
+        <a href="/" class="logo" id="lnk-home-logo">STREAM<span>X</span></a>
+      </div>
+      <div class="header-center">
+        <div class="search-box">
+          <i data-lucide="search" class="search-icon"></i>
+          <input
+            type="text"
+            id="ipt-global-search"
+            placeholder="채널, 카테고리, 방송 제목 검색"
+          />
+          <button id="btn-search-clear" class="hidden">
+            <i data-lucide="x"></i>
+          </button>
+        </div>
+      </div>
+      <div class="header-right">
+        <div id="zone-guest" class="auth-zone">
+          <button class="ghost-btn" id="btn-login">로그인</button>
+          <button class="primary-btn" id="btn-register">회원가입</button>
+        </div>
+        <div id="zone-user" class="auth-zone hidden">
+          <button class="go-live-btn" id="btn-go-live"><i data-lucide="video"></i> 방송하기</button>
+          <span class="coin-badge">💰 <span id="user-cash">1,250</span></span>
+          <button class="icon-btn"><i data-lucide="bell"></i></button>
+          <div class="user-avatar-circle">
+            <img src="https://api.dicebear.com/7.x/avataaars/svg?seed=Felix" />
+          </div>
+        </div>
+      </div>
+    </header>
+
+    <div class="app-container">
+      <!-- Sidebar -->
+      <aside class="sidebar" id="sidebar">
+        <nav class="sidebar-nav">
+          <button class="side-link active" data-view="home">
+            <i data-lucide="home"></i> <span>홈</span>
+          </button>
+          <button class="side-link" data-view="live">
+            <i data-lucide="radio"></i> <span>라이브</span>
+          </button>
+          <button class="side-link" data-view="explore">
+            <i data-lucide="compass"></i> <span>탐색</span>
+          </button>
+          <button class="side-link" data-view="vod">
+            <i data-lucide="film"></i> <span>VOD</span>
+          </button>
+        </nav>
+        <div class="sidebar-divider"></div>
+        <div class="sidebar-section">
+          <h3 class="side-title">팔로우 중</h3>
+          <div id="list-following" class="side-channel-list"></div>
+        </div>
+        <div class="sidebar-section">
+          <h3 class="side-title">추천 채널</h3>
+          <div id="list-recommended" class="side-channel-list"></div>
+        </div>
+      </aside>
+
+      <!-- Main Content -->
+      <main class="main-content" id="scroll-main">
+        <!-- Home View -->
+        <section id="view-home" class="content-view">
+          <div class="main-hero" id="hero-banner">
+            <div class="hero-overlay">
+              <div class="hero-text">
+                <span class="pill-live">추천 라이브</span>
+                <h1>LCK 2024 서머 결승전<br />T1 vs GEN.G</h1>
+                <p>
+                  대한민국 최고의 팀들이 펼치는 최후의 승부, 지금 실시간 중계
+                  중!
+                </p>
+                <button class="primary-btn lg" id="btn-hero-watch">
+                  지금 입장하기
+                </button>
+              </div>
+            </div>
+          </div>
+          <div class="section-top">
+            <h2 id="home-title">인기 라이브 채널</h2>
+            <div class="cat-filter">
+              <button class="filter-tab active" data-cat="all">전체</button>
+              <button class="filter-tab" data-cat="game">게임</button>
+              <button class="filter-tab" data-cat="sports">스포츠</button>
+              <button class="filter-tab" data-cat="variety">버라이어티</button>
+            </div>
+          </div>
+          <div class="stream-grid" id="grid-home"></div>
+          <div id="empty-state" class="empty-placeholder hidden">
+            <i data-lucide="search-x" class="empty-icon"></i>
+            <h3>검색 결과가 없습니다</h3>
+            <p>다른 키워드로 검색하거나 직접 방송을 시작해보세요!</p>
+            <button class="primary-btn mt-4" onclick="window.app.toggleLiveModal(true)">방송 시작하기</button>
+          </div>
+        </section>
+
+        <!-- Live View -->
+        <section id="view-live" class="content-view hidden">
+          <div class="page-head">
+            <h1>라이브</h1>
+            <p>현재 송출 중인 실시간 방송 리스트입니다.</p>
+          </div>
+          <div class="stream-grid" id="grid-live"></div>
+        </section>
+
+        <!-- Explore View -->
+        <section id="view-explore" class="content-view hidden">
+          <div class="page-head">
+            <h1>탐색</h1>
+            <p>취향에 맞는 카테고리를 찾아보세요.</p>
+          </div>
+          <div class="cat-grid" id="grid-explore"></div>
+        </section>
+
+        <!-- VOD View -->
+        <section id="view-vod" class="content-view hidden">
+          <div class="page-head">
+            <h1>인기 다시보기</h1>
+          </div>
+          <div class="stream-grid" id="grid-vod"></div>
+        </section>
+
+        <!-- Player View -->
+        <section id="view-player" class="content-view hidden">
+          <div class="player-wrapper">
+            <div class="player-main-area">
+              <div class="video-box" id="video-frame">
+                <div class="player-ui-top">LIVE</div>
+                <i data-lucide="play" class="icon-play-big"></i>
+                <div class="player-ui-bottom">
+                  <div class="ui-left">
+                    <button class="ui-btn"><i data-lucide="play"></i></button>
+                    <button class="ui-btn">
+                      <i data-lucide="volume-2"></i>
+                    </button>
+                    <span class="ui-live-txt">LIVE</span>
+                  </div>
+                  <div class="ui-right">
+                    <button class="ui-btn">1080p60</button>
+                    <button class="ui-btn">
+                      <i data-lucide="settings"></i>
+                    </button>
+                    <button class="ui-btn" id="btn-fullscreen">
+                      <i data-lucide="maximize"></i>
+                    </button>
+                  </div>
+                </div>
+                <div id="toast-donation" class="donation-popup hidden"></div>
+              </div>
+              <div class="stream-profile-bar">
+                <div class="sp-left">
+                  <div class="sp-avatar"><img src="" id="p-img" /></div>
+                  <div class="sp-info">
+                    <h2 id="p-title">방송 제목</h2>
+                    <div class="sp-meta">
+                      <span id="p-ch" class="bold-white">채널명</span>
+                      <span class="dot">·</span>
+                      <span id="p-cat" class="primary-text">카테고리</span>
+                      <span class="dot">·</span>
+                      <span id="p-v">시청자 0명</span>
+                    </div>
+                  </div>
+                </div>
+                <div class="sp-right">
+                  <button class="follow-btn" id="btn-p-follow">
+                    <i data-lucide="heart"></i> 팔로우
+                  </button>
+                  <button class="star-btn" id="btn-p-donate">💰 캐시 후원</button>
+                </div>
+              </div>
+            </div>
+            <aside class="player-chat-area">
+              <div class="chat-title">실시간 채팅</div>
+              <div class="chat-list" id="chat-list"></div>
+              <div class="chat-input-row">
+                <input
+                  type="text"
+                  id="ipt-chat"
+                  placeholder="채팅에 참여하세요"
+                />
+                <button id="btn-chat-send"><i data-lucide="send"></i></button>
+              </div>
+            </aside>
+          </div>
+        </section>
+      </main>
+    </div>
+
+    <!-- Mobile Nav -->
+    <nav class="mobile-bottom-nav">
+      <button class="m-nav-link active" data-view="home">
+        <i data-lucide="home"></i><span>홈</span>
+      </button>
+      <button class="m-nav-link" data-view="live">
+        <i data-lucide="radio"></i><span>라이브</span>
+      </button>
+      <button class="m-nav-link" data-view="explore">
+        <i data-lucide="compass"></i><span>탐색</span>
+      </button>
+      <button class="m-nav-link" id="btn-m-login">
+        <i data-lucide="user"></i><span>MY</span>
+      </button>
+    </nav>
+
+    <!-- Global Modal -->
+    <div class="modal-dim hidden" id="modal-global">
+      <div class="modal-box">
+        <button class="modal-x" id="btn-modal-close">
+          <i data-lucide="x"></i>
+        </button>
+        <div class="modal-inner">
+          <h2 id="modal-title">로그인</h2>
+          <div id="modal-fields">
+            <!-- Fields will be dynamically injected via JS -->
+          </div>
+          <button class="primary-btn w-full lg mt-4" id="btn-modal-submit">
+            계속하기
+          </button>
+          <div class="modal-sub-actions">
+            <span id="txt-modal-switch">계정이 없으신가요?</span>
+            <button id="btn-modal-switch">회원가입</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Go Live Modal -->
+    <div class="modal-dim hidden" id="modal-live">
+      <div class="modal-box">
+        <button class="modal-x" id="btn-live-close">
+          <i data-lucide="x"></i>
+        </button>
+        <div class="modal-inner">
+          <h2>방송 시작하기</h2>
+          <div class="field">
+            <label>방송 제목</label>
+            <input type="text" id="ipt-live-title" placeholder="시청자의 눈길을 끄는 제목을 입력하세요" />
+          </div>
+          <div class="field">
+            <label>카테고리</label>
+            <select id="sel-live-cat" class="modal-select">
+              <option value="game">게임</option>
+              <option value="sports">스포츠</option>
+              <option value="variety">버라이어티</option>
+              <option value="talk">토크</option>
+            </select>
+          </div>
+          <button class="primary-btn w-full lg mt-4" id="btn-live-start">
+            지금 라이브 시작
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <script src="main.js"></script>
+  </body>
 </html>
