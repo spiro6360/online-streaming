@@ -3,7 +3,7 @@ create table public.profiles (
   id uuid references auth.users on delete cascade not null primary key,
   username text unique,
   email text,
-  cash bigint default 1250,
+  cash bigint default 0,
   avatar_url text,
   updated_at timestamp with time zone default now()
 );
