@@ -28,6 +28,18 @@ StreamX is a modern live streaming platform prototype integrated with Supabase f
    - Test Login process and verify session persistence.
    - Verify Logout functionality and UI reset.
 
+## **Implementation Plan - Site Notification System (Korean)**
+1. **Custom UI Notifications:**
+   - Replaced browser-native notifications with a custom Toast system and a notification dropdown history.
+   - Implemented `addNotification(title, content)` to handle both immediate visual feedback and persistent session-based history.
+2. **Korean Localization:**
+   - Ensured all system messages (auth, stream updates, security) are in Korean.
+   - Updated UI labels like "알림", "새로운 알림이 없습니다" for consistency.
+3. **UI/UX Enhancements:**
+   - Added a red notification badge to the bell icon when new notifications arrive.
+   - Implemented click-outside logic to close the notification dropdown.
+   - Used smooth CSS animations for toasts and popups.
+
 ## **Technical Debt & Future Work**
 - [ ] Implement actual video streaming (HLS/WebRTC).
 - [ ] Add real-time viewer count updates.

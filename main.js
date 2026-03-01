@@ -3,7 +3,17 @@
  */
 
 (function() {
-  console.log("[StreamX] System Booting...");
+  console.log("[StreamX] 시스템 부팅 중...");
+
+  // 브라우저 기본 알림을 한국어로 자동 번역하도록 가로채기
+  const _originalAlert = window.alert;
+  window.alert = function(msg) {
+    if (window.app && window.app.translateError) {
+      _originalAlert(window.app.translateError(msg));
+    } else {
+      _originalAlert(msg);
+    }
+  };
 
   const SX_URL = 'https://swfntarctmeinyftddtx.supabase.co';
   const SX_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InN3Zm50YXJjdG1laW55ZnRkZHR4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzIyNzY0MjcsImV4cCI6MjA4Nzg1MjQyN30.KrgHiEPqCXPnVNIMK1AIiuoUT1iQc4K2w1SX4RHpWVE';
@@ -32,6 +42,98 @@
       checkedNick: ""
     },
 
+    // --- Toast System ---
+    toast(msg, type = "info") {
+      const container = document.getElementById("toast-container");
+      if (!container) return;
+      
+      // 메시지가 객체인 경우 처리
+      const messageText = typeof msg === 'string' ? msg : (msg?.message || JSON.stringify(msg));
+      const translated = this.translateError(messageText);
+
+      const toast = document.createElement("div");
+      toast.className = `toast ${type}`;
+      toast.innerHTML = `<div class="toast-msg">${translated}</div>`;
+      container.appendChild(toast);
+      
+      setTimeout(() => {
+        toast.classList.add("fade-out");
+        setTimeout(() => toast.remove(), 300);
+      }, 3500);
+    },
+
+    translateError(msg) {
+      if (!msg) return "";
+      const text = String(msg);
+      
+      // 정규식 기반 강제 매핑 (대소문자 무관)
+      if (/invalid login credentials/i.test(text) || /invalid credentials/i.test(text)) {
+        return "이메일 또는 비밀번호가 잘못되었습니다.";
+      }
+      if (/user already registered/i.test(text)) return "이미 가입된 이메일 주소입니다.";
+      if (/email not confirmed/i.test(text)) return "이메일 인증이 완료되지 않았습니다. 메일함을 확인해주세요.";
+      if (/signup disabled/i.test(text)) return "현재 회원가입이 비활성화되어 있습니다.";
+      if (/invalid email/i.test(text)) return "유효하지 않은 이메일 형식입니다.";
+      if (/password should be at least 6 characters/i.test(text)) return "비밀번호는 최소 6자 이상이어야 합니다.";
+      if (/rate limit/i.test(text) || /too many requests/i.test(text)) return "너무 많은 요청이 발생했습니다. 잠시 후 다시 시도해주세요.";
+      if (/user not found/i.test(text)) return "사용자를 찾을 수 없습니다.";
+      if (/network error/i.test(text)) return "네트워크 연결이 원활하지 않습니다.";
+      
+      return text;
+    },
+
+    // --- Notification List ---
+    addNotification(title, content) {
+      const list = document.querySelector(".noti-list");
+      if (!list) return;
+      
+      const emptyMsg = list.querySelector(".noti-empty");
+      if (emptyMsg) emptyMsg.remove();
+
+      const translatedContent = this.translateError(content);
+
+      const noti = document.createElement("div");
+      noti.className = "noti-item";
+      noti.innerHTML = `
+        <div class="noti-item-title">${title}</div>
+        <div class="noti-item-content">${translatedContent}</div>
+        <div class="noti-item-time">방금 전</div>
+      `;
+      list.prepend(noti);
+      this.toast(`${title}: ${translatedContent}`, "info");
+
+      // 알림 배지 처리 (있다면)
+      const btn = document.getElementById("btn-noti-toggle");
+      if (btn && !btn.querySelector(".noti-badge")) {
+        const badge = document.createElement("span");
+        badge.className = "noti-badge";
+        btn.appendChild(badge);
+      }
+    },
+
+    toggleNotiPopup(forceHide = false) {
+      const popup = document.getElementById("popup-notifications");
+      if (!popup) return;
+      if (forceHide) {
+        popup.classList.add("hidden");
+      } else {
+        popup.classList.toggle("hidden");
+        // 팝업을 열면 배지 제거
+        if (!popup.classList.contains("hidden")) {
+          document.querySelector(".noti-badge")?.remove();
+        }
+      }
+    },
+
+    toggleSidebar() {
+      const sidebar = document.getElementById("sidebar");
+      if (sidebar) {
+        sidebar.classList.toggle("collapsed");
+        // 메인 컨텐츠 영역의 여백도 조절해야 할 수 있음 (CSS에서 처리 권장)
+        document.querySelector(".main-content")?.classList.toggle("sidebar-collapsed");
+      }
+    },
+
     // --- Modal Logic ---
     toggleModal(show, mode = "login") {
       const modal = document.getElementById("modal-global");
@@ -52,7 +154,7 @@
               </div>
               <small id="nick-msg" style="display:block; margin-top:4px; font-size:11px;"></small>
             </div>
-            <div class="field"><label>이메일</label><input type="email" id="modal-email" placeholder="email@example.com" /></div>
+            <div class="field"><label>이메일</label><input type="email" id="modal-email" placeholder="이메일@주소.com" /></div>
             <div class="field"><label>비밀번호</label><input type="password" id="modal-pw" placeholder="6자리 이상 비밀번호" /></div>
           ` : `
             <div class="field"><label>이메일</label><input type="email" id="modal-email" placeholder="이메일 입력" autofocus /></div>
@@ -60,6 +162,19 @@
           `;
         }
         document.getElementById("btn-modal-submit").dataset.mode = mode;
+        
+        // 하단 안내 문구 및 버튼 텍스트 변경
+        const switchTextEl = document.getElementById("txt-modal-switch");
+        const switchBtnEl = document.getElementById("btn-modal-switch");
+        if (switchTextEl && switchBtnEl) {
+          if (mode === "register") {
+            switchTextEl.textContent = "이미 계정이 있으신가요?";
+            switchBtnEl.textContent = "로그인";
+          } else {
+            switchTextEl.textContent = "계정이 없으신가요?";
+            switchBtnEl.textContent = "회원가입";
+          }
+        }
       } else {
         modal.classList.add("hidden");
         modal.style.display = "none";
@@ -68,7 +183,7 @@
 
     async checkUsername() {
       const nick = document.getElementById("modal-username")?.value.trim();
-      if (!nick || nick.length < 2) return alert("닉네임은 2자 이상이어야 합니다.");
+      if (!nick || nick.length < 2) return this.toast("닉네임은 2자 이상이어야 합니다.", "error");
       const { data } = await getClient().from('profiles').select('username').eq('username', nick);
       const msgEl = document.getElementById("nick-msg");
       if (data && data.length > 0) {
@@ -90,8 +205,8 @@
       const username = document.getElementById("modal-username")?.value.trim();
 
       if (mode === "register") {
-        if (!this.state.isNickChecked || this.state.checkedNick !== username) return alert("닉네임 중복 확인을 해주세요.");
-        if (password.length < 6) return alert("비밀번호는 6자리 이상이어야 합니다.");
+        if (!this.state.isNickChecked || this.state.checkedNick !== username) return this.toast("닉네임 중복 확인을 해주세요.", "error");
+        if (password.length < 6) return this.toast("비밀번호는 6자리 이상이어야 합니다.", "error");
         const { error } = await client.auth.signUp({ 
           email, 
           password, 
@@ -100,12 +215,12 @@
             emailRedirectTo: 'https://emailauthentication.shop'
           } 
         });
-        if (error) return alert(error.message);
-        alert("회원가입 성공! 메일 인증 후 로그인 가능합니다.");
+        if (error) return this.toast(error.message, "error");
+        this.addNotification("회원가입", "회원가입 성공! 메일 인증 후 로그인 가능합니다.");
         this.toggleModal(true, "login");
       } else {
         const { error } = await client.auth.signInWithPassword({ email, password });
-        if (error) return alert(error.message);
+        if (error) return this.toast(error.message, "error");
         location.reload();
       }
     },
@@ -118,18 +233,18 @@
       
       if (error) {
         console.error("Withdraw error:", error);
-        return alert("탈퇴 처리 중 오류가 발생했습니다: " + error.message);
+        return this.toast("탈퇴 처리 중 오류가 발생했습니다: " + error.message, "error");
       }
       
-      alert("탈퇴가 완료되었습니다. 그동안 이용해주셔서 감사합니다.");
+      this.toast("탈퇴가 완료되었습니다. 그동안 이용해주셔서 감사합니다.", "success");
       await client.auth.signOut();
-      location.reload();
+      setTimeout(() => location.reload(), 1500);
     },
 
     async updateStreamInfo() {
       const title = document.getElementById("ipt-stream-title").value.trim();
       const category = document.getElementById("sel-stream-category").value;
-      if (!title) return alert("방송 제목을 입력해주세요.");
+      if (!title) return this.toast("방송 제목을 입력해주세요.", "error");
 
       const client = getClient();
       const user = this.state.currentUser;
@@ -155,15 +270,15 @@
             username: user.username,
             title,
             category,
-            status: 'live'
+            status: 'off'
           });
         error = err;
       }
 
       if (error) {
-        alert("방송 정보 업데이트 실패: " + error.message);
+        this.toast("방송 정보 업데이트 실패: " + error.message, "error");
       } else {
-        alert("방송 정보가 성공적으로 업데이트되었습니다.");
+        this.addNotification("방송 설정", "방송 정보가 성공적으로 업데이트되었습니다.");
         this.loadStreams(); // 목록 갱신
       }
     },
@@ -171,7 +286,15 @@
     async checkSession() {
       const client = getClient();
       const { data: { session } } = await client.auth.getSession();
+      
       if (session?.user) {
+        // 이메일 인증 여부 확인
+        if (!session.user.email_confirmed_at) {
+          this.addNotification("보안", "이메일 인증이 필요합니다. 메일함을 확인해 주세요.");
+          await client.auth.signOut();
+          return;
+        }
+
         this.state.isLoggedIn = true;
         const { data: profile } = await client.from('profiles').select('*').eq('id', session.user.id).single();
         this.state.currentUser = profile;
@@ -202,7 +325,7 @@
       
       if (stream) {
         document.getElementById("ipt-stream-title").value = stream.title || "";
-        document.getElementById("sel-stream-category").value = stream.category || "Just Chatting";
+        document.getElementById("sel-stream-category").value = stream.category || "저스트 채팅";
       }
     },
 
@@ -217,6 +340,11 @@
 
     // --- Streaming & View ---
     switchView(viewId) {
+      if (viewId === 'mypage' && !this.state.isLoggedIn) {
+        this.toast("로그인이 필요한 서비스입니다.", "info");
+        this.toggleModal(true, 'login');
+        return;
+      }
       document.querySelectorAll(".content-view").forEach(v => v.classList.add("hidden"));
       document.getElementById(`view-${viewId}`)?.classList.remove("hidden");
       document.querySelectorAll(".side-link, .m-nav-link").forEach(n => {
@@ -245,28 +373,45 @@
 
     renderGrids() {
       const configs = [
-        { id: "grid-home", filter: s => s.status === "live" },
-        { id: "grid-live", filter: s => s.status === "live" },
-        { id: "grid-vod", filter: s => s.status === "vod" }
+        { id: "grid-home", filter: s => s.status === "live", type: 'live' },
+        { id: "grid-live", filter: s => s.status === "live", type: 'live' },
+        { id: "grid-vod", filter: s => s.status === "vod", type: 'vod' }
       ];
       configs.forEach(cfg => {
         const el = document.getElementById(cfg.id);
         if (!el) return;
         const filtered = this.state.streams.filter(cfg.filter);
-        el.innerHTML = filtered.length ? filtered.map(s => `
-          <div class="stream-card" onclick="window.app.openStream('${s.id}')">
-            <div class="thumb-box">
-              <img src="${s.thumbnail_url || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400'}" />
-              <div class="card-category">${s.category || 'Just Chatting'}</div>
-            </div>
-            <div class="card-details">
-              <div class="card-txt">
-                <div class="c-title">${s.title}</div>
-                <div class="c-channel">${s.username}</div>
+        
+        if (filtered.length) {
+          el.innerHTML = filtered.map(s => `
+            <div class="stream-card" onclick="window.app.openStream('${s.id}')">
+              <div class="thumb-box">
+                <img src="${s.thumbnail_url || 'https://images.unsplash.com/photo-1542751371-adc38448a05e?w=400'}" />
+                <div class="card-category">${s.category || '저스트 채팅'}</div>
+              </div>
+              <div class="card-details">
+                <div class="card-txt">
+                  <div class="c-title">${s.title}</div>
+                  <div class="c-channel">${s.username}</div>
+                </div>
               </div>
             </div>
-          </div>
-        `).join("") : '<div class="empty-msg">내용이 없습니다.</div>';
+          `).join("");
+        } else {
+          // 타입별 다른 메시지 출력
+          const isVod = cfg.type === 'vod';
+          el.innerHTML = `
+            <div class="empty-msg-box">
+              <div class="empty-icon-circle">
+                <i data-lucide="${isVod ? 'history' : 'video-off'}"></i>
+              </div>
+              <h3>${isVod ? '아직 저장된 영상이 없어요' : '지금은 방송 중인 채널이 없어요'}</h3>
+              <p>${isVod ? '스트리머가 방송을 종료하면 이곳에서 다시볼 수 있습니다.' : '직접 첫 번째 방송의 주인공이 되어보세요!'}</p>
+              ${isVod ? '' : '<button class="primary-btn" onclick="window.app.switchView(\'mypage\')">방송 시작하기</button>'}
+            </div>
+          `;
+        }
+        if (window.lucide) window.lucide.createIcons();
       });
     },
 
@@ -296,7 +441,7 @@
         hls.attachMedia(video);
         hls.on(Hls.Events.MANIFEST_PARSED, () => video.play());
         hls.on(Hls.Events.ERROR, (event, data) => {
-          if (data.fatal) console.warn("HLS Fatal Error, stream might be offline.");
+          if (data.fatal) console.warn("HLS 치명적 오류, 방송이 오프라인일 수 있습니다.");
         });
       } else if (video.canPlayType('application/vnd.apple.mpegurl')) {
         video.src = streamUrl;
@@ -317,6 +462,12 @@
     App.loadStreams();
     document.addEventListener("click", (e) => {
       const t = e.target.closest("button, a, .side-link, .m-nav-link, .user-avatar-circle");
+      const isNotiArea = e.target.closest("#popup-notifications") || e.target.closest("#btn-noti-toggle");
+      
+      if (!isNotiArea) {
+        App.toggleNotiPopup(true);
+      }
+
       if (!t) return;
       const id = t.id;
       if (t.dataset.view) { e.preventDefault(); App.switchView(t.dataset.view); }
@@ -327,6 +478,8 @@
       else if (id === "btn-withdraw") App.withdrawAccount();
       else if (id === "lnk-home-logo") { e.preventDefault(); App.switchView("home"); }
       else if (id === "btn-modal-close") App.toggleModal(false);
+      else if (id === "btn-noti-toggle") App.toggleNotiPopup();
+      else if (id === "btn-sidebar-toggle") App.toggleSidebar();
       else if (id === "btn-modal-switch") {
         const title = document.getElementById("modal-title")?.textContent;
         App.toggleModal(true, title === "로그인" ? "register" : "login");

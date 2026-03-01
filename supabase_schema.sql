@@ -1,98 +1,62 @@
--- 1. Profiles table (linked to Auth)
-create table public.profiles (
+-- 1. Profiles table
+create table if not exists public.profiles (
   id uuid references auth.users on delete cascade not null primary key,
   username text unique,
   email text,
   cash bigint default 0,
   avatar_url text,
   stream_key text unique default gen_random_uuid()::text,
-  role text default 'user', -- 'user' or 'admin'
+  role text default 'user',
   updated_at timestamp with time zone default now()
 );
 
--- Enable RLS for profiles
-alter table public.profiles enable row level security;
-
-create policy "Public profiles are viewable by everyone"
-  on profiles for select
-  using ( true );
-
-create policy "Users can update their own profiles"
-  on profiles for update
-  using ( auth.uid() = id );
-
--- 2. Streams table (Live & VOD)
-create table public.streams (
+-- 2. Streams table
+create table if not exists public.streams (
   id uuid default gen_random_uuid() primary key,
   user_id uuid references auth.users on delete cascade not null,
   username text,
   title text not null,
   category text,
-  status text default 'live', -- 'live' or 'vod'
+  status text default 'off', -- 기본값은 off
   viewers int default 0,
   thumbnail_url text,
   created_at timestamp with time zone default now()
 );
 
--- Enable RLS for streams
+-- RLS 및 정책 (기존과 동일하되 생략 방지를 위해 포함)
+alter table public.profiles enable row level security;
 alter table public.streams enable row level security;
 
-create policy "Streams are viewable by everyone"
-  on streams for select
-  using ( true );
-
-create policy "Users can create their own streams"
-  on streams for insert
-  with check ( auth.uid() = user_id );
-
-create policy "Users can update their own streams"
-  on streams for update
-  using ( auth.uid() = user_id );
-
--- 3. Messages table (Chat)
-create table public.messages (
-  id uuid default gen_random_uuid() primary key,
-  stream_id uuid references public.streams on delete cascade not null,
-  user_id uuid references auth.users on delete cascade not null,
-  username text,
-  content text not null,
-  created_at timestamp with time zone default now()
-);
-
--- Enable RLS for messages
-alter table public.messages enable row level security;
-
-create policy "Messages are viewable by everyone"
-  on messages for select
-  using ( true );
-
-create policy "Users can insert their own messages"
-  on messages for insert
-  with check ( auth.uid() = user_id );
-
--- 4. Automatically create profile on signup
-create function public.handle_new_user()
-returns trigger as $$
-begin
-  insert into public.profiles (id, username, email, avatar_url)
-  values (new.id, new.raw_user_meta_data->>'username', new.email, 'https://api.dicebear.com/7.x/avataaars/svg?seed=' || new.id);
-  return new;
-end;
-$$ language plpgsql security definer;
-
-create trigger on_auth_user_created
-  after insert on auth.users
-  for each row execute procedure public.handle_new_user();
-
--- 5. Withdrawal Function (SECURITY DEFINER to allow users to delete themselves)
-create or replace function public.withdraw_user()
+-- 3. 방송 상태 자동 업데이트 함수 (미디어 서버용)
+create or replace function public.update_stream_status_by_key(p_stream_key text, p_status text)
 returns void
 language plpgsql
-security definer
-set search_path = public
+security definer -- 관리자 권한으로 실행
 as $$
+declare
+  v_user_id uuid;
+  v_username text;
 begin
-  -- auth.uid() returns the current user's ID
-  delete from auth.users where id = auth.uid();
+  -- 1. 스트림 키로 사용자 찾기
+  select id, username into v_user_id, v_username 
+  from public.profiles 
+  where stream_key = p_stream_key;
+
+  if v_user_id is not null then
+    -- 2. 해당 사용자의 스트림 정보 업데이트 (없으면 생성, 있으면 수정)
+    insert into public.streams (user_id, username, title, status)
+    values (v_user_id, v_username, v_username || '님의 방송', p_status)
+    on conflict (user_id) do update 
+    set status = p_status, 
+        updated_at = now();
+  end if;
 end;
 $$;
+
+-- streams 테이블에 user_id unique 제약 조건 추가 (on conflict 처리를 위해)
+do $$ 
+begin
+  if not exists (select 1 from pg_constraint where conname = 'streams_user_id_key') then
+    alter table public.streams add constraint streams_user_id_key unique (user_id);
+  end if;
+end $$;

@@ -3,7 +3,7 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>StreamX - Elite Live Streaming</title>
+    <title>StreamX - 차세대 라이브 스트리밍</title>
     <link rel="stylesheet" href="style.css" />
     <script src="https://unpkg.com/lucide@latest"></script>
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -66,7 +66,7 @@
             <i data-lucide="radio"></i> <span>라이브</span>
           </button>
           <button class="side-link" data-view="vod">
-            <i data-lucide="play-circle"></i> <span>VOD</span>
+            <i data-lucide="play-circle"></i> <span>다시보기</span>
           </button>
           <button class="side-link" data-view="explore">
             <i data-lucide="compass"></i> <span>탐색</span>
@@ -112,7 +112,7 @@
 
         <!-- VOD View -->
         <section id="view-vod" class="content-view hidden">
-          <div class="page-head"><h1>다시보기 (VOD)</h1></div>
+          <div class="page-head"><h1>다시보기</h1></div>
           <div class="stream-grid" id="grid-vod"></div>
         </section>
 
@@ -124,7 +124,7 @@
                 <img src="" id="mp-avatar" class="mp-avatar-img" />
                 <div class="mp-info">
                   <h1 id="mp-username">사용자 이름</h1>
-                  <p id="mp-email">user@example.com</p>
+                  <p id="mp-email">이메일@주소.com</p>
                 </div>
               </div>
               <div class="mp-header-actions">
@@ -143,11 +143,11 @@
                   <div class="field">
                     <label>카테고리</label>
                     <select id="sel-stream-category">
-                      <option value="Just Chatting">Just Chatting</option>
-                      <option value="Game">게임</option>
-                      <option value="Music">음악</option>
-                      <option value="Sports">스포츠</option>
-                      <option value="Education">교육</option>
+                      <option value="저스트 채팅">저스트 채팅</option>
+                      <option value="게임">게임</option>
+                      <option value="음악">음악</option>
+                      <option value="스포츠">스포츠</option>
+                      <option value="교육">교육</option>
                     </select>
                   </div>
                   <button class="primary-btn w-full mt-2" id="btn-update-stream">방송 정보 업데이트</button>
@@ -219,7 +219,7 @@
     <nav class="mobile-bottom-nav">
       <button class="m-nav-link active" data-view="home"><i data-lucide="home"></i><span>홈</span></button>
       <button class="m-nav-link" data-view="live"><i data-lucide="radio"></i><span>라이브</span></button>
-      <button class="m-nav-link" id="btn-m-mypage" onclick="window.app.switchView('mypage')"><i data-lucide="user"></i><span>MY</span></button>
+      <button class="m-nav-link" id="btn-m-mypage" onclick="window.app.switchView('mypage')"><i data-lucide="user"></i><span>내 정보</span></button>
     </nav>
 
     <!-- Global Auth Modal -->
@@ -239,6 +239,9 @@
         </div>
       </div>
     </div>
+
+    <!-- Toast Container -->
+    <div id="toast-container" class="toast-container"></div>
 
     <script src="main.js"></script>
   </body>
