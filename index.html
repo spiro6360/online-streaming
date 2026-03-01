@@ -127,9 +127,33 @@
                   <p id="mp-email">user@example.com</p>
                 </div>
               </div>
-              <button class="ghost-btn red" id="btn-logout">로그아웃</button>
+              <div class="mp-header-actions">
+                <button class="ghost-btn" id="btn-logout">로그아웃</button>
+                <button class="ghost-btn red" id="btn-withdraw">회원탈퇴</button>
+              </div>
             </div>
             <div class="mypage-content">
+              <div class="mp-card">
+                <h3>방송 정보 설정</h3>
+                <div class="stream-info-form">
+                  <div class="field">
+                    <label>방송 제목</label>
+                    <input type="text" id="ipt-stream-title" placeholder="방송 제목을 입력하세요" />
+                  </div>
+                  <div class="field">
+                    <label>카테고리</label>
+                    <select id="sel-stream-category">
+                      <option value="Just Chatting">Just Chatting</option>
+                      <option value="Game">게임</option>
+                      <option value="Music">음악</option>
+                      <option value="Sports">스포츠</option>
+                      <option value="Education">교육</option>
+                    </select>
+                  </div>
+                  <button class="primary-btn w-full mt-2" id="btn-update-stream">방송 정보 업데이트</button>
+                </div>
+                <p class="help-text mt-2">방송 중에도 제목과 카테고리를 변경할 수 있습니다.</p>
+              </div>
               <div class="mp-card">
                 <h3>방송 송출 설정 (OBS용)</h3>
                 <div class="stream-settings">

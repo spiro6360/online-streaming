@@ -24,7 +24,7 @@ create policy "Users can update their own profiles"
 -- 2. Streams table (Live & VOD)
 create table public.streams (
   id uuid default gen_random_uuid() primary key,
-  user_id uuid references auth.users not null,
+  user_id uuid references auth.users on delete cascade not null,
   username text,
   title text not null,
   category text,
@@ -53,7 +53,7 @@ create policy "Users can update their own streams"
 create table public.messages (
   id uuid default gen_random_uuid() primary key,
   stream_id uuid references public.streams on delete cascade not null,
-  user_id uuid references auth.users not null,
+  user_id uuid references auth.users on delete cascade not null,
   username text,
   content text not null,
   created_at timestamp with time zone default now()
@@ -83,3 +83,16 @@ $$ language plpgsql security definer;
 create trigger on_auth_user_created
   after insert on auth.users
   for each row execute procedure public.handle_new_user();
+
+-- 5. Withdrawal Function (SECURITY DEFINER to allow users to delete themselves)
+create or replace function public.withdraw_user()
+returns void
+language plpgsql
+security definer
+set search_path = public
+as $$
+begin
+  -- auth.uid() returns the current user's ID
+  delete from auth.users where id = auth.uid();
+end;
+$$;
